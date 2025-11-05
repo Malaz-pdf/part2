@@ -1,8 +1,8 @@
 import { useState,useEffect } from 'react'
-import axios from 'axios'
 import Persons from './components/Persons'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
+import personService from '../services/persons'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
@@ -14,13 +14,9 @@ const App = () => {
   searchedName === '' ? persons : persons.filter(person => person.name.toLowerCase().includes(searchedName.toLowerCase()))
 
   useEffect(() => {
-  console.log('effect')
-  axios
-    .get('http://localhost:3001/persons')
-    .then(response => {
-      console.log('promise fulfilled')
-      setPersons(response.data)
-    })
+  personService
+              .get()
+              .then(initialPerson => {setPersons(initialPerson)})
 }, [])
 
   const addPerson = (event) =>{
@@ -29,6 +25,7 @@ const App = () => {
       name : newName,
       number : newNumber
     }
+
     const validNumber = /^[0-9+()\-\s]*$/.test(newNumber)
     if(!validNumber){
       alert(`${newNumber} is not valid`)
@@ -40,23 +37,43 @@ const App = () => {
       return
     }
 
-    const nameRepeated = persons.some(person => person.name === newName)
-    const numberRepeated = persons.some(person => person.number === newNumber)
+    const personRepeated = persons.find(person => person.name === newName)
+    const numberRepeated = persons.some(person => person.number === newNumber) 
 
-    if (nameRepeated){
+    if (personRepeated){
+      if (window.confirm(`${newName} is already added to phonebook, replace the old number with a new one?`)) {
+    const changedNumber = { ...personRepeated, number: newNumber }
+
+    personService
+      .update(personRepeated.id, changedNumber)
+      .then(returnedPerson => {
+        setPersons(persons.map(person => person.id === personRepeated.id ? returnedPerson : person))
+        setNewName('')
+        setNewNumber('')
+      })
+
+      .catch(error => {  
+        alert(`the person '${personRepeated.name}' was already deleted from server`)
+        setPersons(persons.filter(p => p.id !== personRepeated.id))
+      })
+
+  } else {
     alert(`${newName} is already added to phonebook`)
-    return
-   } 
+  }
+  
+  return
+      } 
    else if (numberRepeated){
     alert(`${newNumber} is already used`)
     return
    }
    else{
 
-    setPersons(persons.concat(personObj))
-    setNewName("")
-    setNewNumber("")
-
+    personService
+                .create(personObj)
+                .then(returnedPerson => {setPersons(persons.concat(returnedPerson))
+                setNewName("")
+                setNewNumber("")})
   }
 }
   const handelNameChange = (event) => {
@@ -75,6 +92,22 @@ const App = () => {
     setSearchedName(event.target.value)
 
   }
+  const removePerson = id => {
+    const updatedPersons = persons.filter( person => person.id !== id )
+
+    personService
+                .remove(id)
+                .then(returnedPerson =>{
+                setPersons(updatedPersons)
+                })
+                .catch(error => {
+                 alert(
+                `the Person '${person.name}' was already deleted from server`
+                )
+                setPersons(persons.filter(person => person.id !== id))
+                })
+  }
+
   
 
   return (
@@ -89,7 +122,7 @@ const App = () => {
 
       <h2>Numbers</h2>
 
-      <Persons namesToShow={namesToShow}/>
+      <Persons namesToShow={namesToShow} removePerson={removePerson}/>
       
     </div>
   )
