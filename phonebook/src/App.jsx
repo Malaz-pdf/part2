@@ -3,12 +3,16 @@ import Persons from './components/Persons'
 import Filter from './components/Filter'
 import PersonForm from './components/PersonForm'
 import personService from './services/persons'
+import Notification from './components/Notification'
+import Confirmation from './components/Confirmation'
 
 const App = () => {
   const [persons, setPersons] = useState([]) 
   const [newName, setNewName] = useState('')
   const [newNumber, setNewNumber] = useState('')
   const [searchedName, setSearchedName] = useState('')
+  const [errorMessage, setErrorMessage] = useState(null)
+  const [succesMessage, setSuccesMessage] = useState(null)
 
   const namesToShow = 
   searchedName === '' ? persons : persons.filter(person => person.name.toLowerCase().includes(searchedName.toLowerCase()))
@@ -28,12 +32,22 @@ const App = () => {
 
     const validNumber = /^[0-9+()\-\s]*$/.test(newNumber)
     if(!validNumber){
-      alert(`${newNumber} is not valid`)
+      setErrorMessage(
+          `${newNumber} is not valid. please use a real number`
+        )
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 5000)
       return
     }
 
     if (newName.trim() === '' || newNumber.trim() === '') {
-      alert('Please fill in both fields')
+      setErrorMessage(
+          'Please fill in both fields'
+        )
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 5000)
       return
     }
 
@@ -50,21 +64,44 @@ const App = () => {
         setPersons(persons.map(person => person.id === personRepeated.id ? returnedPerson : person))
         setNewName('')
         setNewNumber('')
+        setSuccesMessage(
+          'Nummber change has been successful'
+        )
+        setTimeout(() => {
+          setSuccesMessage(null)
+        }, 5000)
+        
       })
+      
 
-      .catch(error => {  
-        alert(`the person '${personRepeated.name}' was already deleted from server`)
+      .catch(error => { 
+        setErrorMessage(
+          `the person '${personRepeated.name}' was already deleted from server`
+        )
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 5000)
         setPersons(persons.filter(p => p.id !== personRepeated.id))
       })
 
   } else {
-    alert(`${newName} is already added to phonebook`)
+    setErrorMessage(
+          `${newName} is already added to phonebook`
+        )
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 5000)
   }
   
   return
       } 
    else if (numberRepeated){
-    alert(`${newNumber} is already used`)
+    setErrorMessage(
+          `${newNumber} is already used`
+        )
+        setTimeout(() => {
+          setErrorMessage(null)
+        }, 5000)
     return
    }
    else{
@@ -73,7 +110,14 @@ const App = () => {
                 .create(personObj)
                 .then(returnedPerson => {setPersons(persons.concat(returnedPerson))
                 setNewName("")
-                setNewNumber("")})
+                setNewNumber("")
+                setSuccesMessage(
+               `added ${newName}`)
+                setTimeout(() => {
+                setSuccesMessage(null)
+                 }, 5000)
+                
+                 })
   }
 }
   const handelNameChange = (event) => {
@@ -93,17 +137,26 @@ const App = () => {
 
   }
   const removePerson = id => {
+    const person = persons.find(p => p.id === id)
     const updatedPersons = persons.filter( person => person.id !== id )
 
     personService
                 .remove(id)
                 .then(returnedPerson =>{
                 setPersons(updatedPersons)
+                setSuccesMessage(
+               `Deletion of ${person.name} was successful`)
+                setTimeout(() => {
+                setSuccesMessage(null)
+                 }, 5000)
                 })
                 .catch(error => {
-                 alert(
-                `the Person '${person.name}' was already deleted from server`
-                )
+                setErrorMessage(
+                `Information of '${person.name}' has already been deleted from server`)
+                setTimeout(() => {
+                setErrorMessage(null)
+                 }, 5000)
+                
                 setPersons(persons.filter(person => person.id !== id))
                 })
   }
@@ -113,6 +166,8 @@ const App = () => {
   return (
     <div>
       <h2>Phonebook</h2>
+      <Notification message={errorMessage}/>
+      <Confirmation message={succesMessage}/>
 
       <Filter searchedName = {searchedName} handelNameSearch={handelNameSearch} />
 
